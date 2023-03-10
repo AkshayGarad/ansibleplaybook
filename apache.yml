@@ -1,0 +1,44 @@
+---
+- hosts: myservers
+  become: yes
+  vars:
+    http_port: 80
+    max_keep_alive_requests: 100
+    keep_alive_timeout: 5
+    server_admin_email: webmaster@localhost
+
+  tasks:
+    - name: Install aptitude using apt
+      apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+    - name: Install apache2 using aptitude
+      apt: name=apache2 state=latest
+
+    - name: Create document root folder for new site
+      file:
+        path: "/var/www/{{ http_host }}"
+        state: directory
+
+    - name: Copy index.html file to new site document root folder
+      copy:
+        src: files/index.html
+        dest: "/var/www/{{ http_host }}/index.html"
+
+    - name: Copy apache2 configuration file for new site
+      template:
+        src: templates/apache2.conf.j2
+        dest: "/etc/apache2/sites-available/{{ http_conf }}"
+
+    - name: Enable new site configuration file for apache2 
+      shell:
+        cmd : "a2ensite {{ http_conf }}"
+
+    - name : Disable default site configuration file for apache2 
+      shell :
+        cmd : "a2dissite 000-default.conf"
+      when : disable_default == true
+
+    - name : Restart Apache service 
+      service :
+        name : apache2 
+        state : restarted
